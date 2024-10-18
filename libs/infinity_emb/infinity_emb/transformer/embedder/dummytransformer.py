@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023-now michaelfeil
+
 import numpy as np
 
 from infinity_emb.args import EngineArgs
@@ -23,7 +26,7 @@ class DummyTransformer(BaseEmbedder):
 
     @quant_embedding_decorator()
     def encode_post(self, embedding: EmbeddingReturnType):
-        return embedding
+        return [e for e in embedding]
 
     def tokenize_lengths(self, sentences: list[str]) -> list[int]:
         return [len(s) for s in sentences]

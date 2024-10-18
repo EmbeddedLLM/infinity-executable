@@ -1,9 +1,9 @@
-.PHONY: all clean docs_build docs_clean docs_linkcheck api_docs_build api_docs_clean api_docs_linkcheck format lint test tests test_watch integration_tests docker_tests help extended_tests
+.PHONY: all clean docs_build docs_clean docs_linkcheck api_docs_build api_docs_clean api_docs_linkcheck format lint test tests test_watch template_docker integration_tests docker_tests help extended_tests
 
 # Default target executed when no arguments are given to make.
 all: help
 
-precommit : | format spell_fix spell_check lint test
+precommit : | format spell_fix spell_check lint poetry_check cli_v2_docs template_docker openapi test 
 
 ######################
 # TESTING AND COVERAGE
@@ -14,15 +14,15 @@ TEST_FILE ?= tests/unit_tests/
 
 # Run unit tests and generate a coverage report.
 coverage:
-	poetry run pytest --cov \
-		--cov-config=.coveragerc \
-		--cov-report xml \
-		--cov-report term-missing:skip-covered \
-		$(TEST_FILE)
+	poetry run coverage run --source ./infinity_emb -m pytest 
+	poetry run coverage report -m
+	poetry run coverage xml
 
 test tests:
 	poetry run pytest 
 
+openapi:
+	./../../docs/assets/create_openapi_with_server_hook.sh
 
 ######################
 # LINTING AND FORMATTING
@@ -42,6 +42,14 @@ format format_diff:
 	[ "$(PYTHON_FILES)" = "" ] || poetry run black $(PYTHON_FILES)
 	[ "$(PYTHON_FILES)" = "" ] || poetry run ruff --select I --fix $(PYTHON_FILES)
 
+template_docker:
+	jinja2 Dockerfile.jinja2 Docker.template.yaml --format=yaml -s amd > Dockerfile.amd_auto
+	jinja2 Dockerfile.jinja2 Docker.template.yaml --format=yaml -s cpu > Dockerfile.cpu_auto
+	jinja2 Dockerfile.jinja2 Docker.template.yaml --format=yaml -s nvidia > Dockerfile.nvidia_auto
+
+poetry_check:
+	poetry check
+
 spell_check:
 	poetry run codespell --toml pyproject.toml
 
@@ -54,6 +62,10 @@ benchmark_embed: tests/data/benchmark/benchmark_embed.json
 	-p $< \
 	http://127.0.0.1:7997/embeddings
 	# sudo apt-get apache2-utils
+
+# Generate CLI v2 documentation
+cli_v2_docs:
+	./../../docs/assets/create_cli_v2_docs.sh
 
 ######################
 # HELP
@@ -73,6 +85,7 @@ help:
 	@echo 'lint                         - run linters'
 	@echo 'spell_check               	- run codespell on the project'
 	@echo 'spell_fix               		- run codespell on the project and fix the errors'
+	@echo 'poetry_check                 - run poetry check'
 	@echo '-- TESTS --'
 	@echo 'coverage                     - run unit tests and generate coverage report'
 	@echo 'test                         - run unit tests'

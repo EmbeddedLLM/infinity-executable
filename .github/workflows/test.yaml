@@ -10,6 +10,12 @@ on:
         required: false
         type: boolean
         default: true
+      extra_poetry:
+        description: 'Extra poetry commands to run'
+        required: false
+        type: string
+        default: "--extras all --with test"
+
 
 env:
   POETRY_VERSION: "1.7.1"
@@ -23,7 +29,7 @@ jobs:
     strategy:
       # fail-fast: true
       matrix:
-        os: [ubuntu-latest, windows-latest, ] # macos-latest
+        os: [ubuntu-latest, windows-latest] # macos-latest
         python-version:
           - "3.9"
           - "3.10"
@@ -50,8 +56,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: Py${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.coverage_tests }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Free Disk Space
-        uses: jlumbroso/free-disk-space@v1.3.0
+        uses: "./.github/actions/disk_cleanup"
         if: runner.os == 'Linux'
         with:
           tool-cache: false
@@ -61,25 +69,29 @@ jobs:
           large-packages: false
           docker-images: false
           swap-storage: false
-        
-      - uses: actions/checkout@v4
-
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_setup"
         with:
           python-version: ${{ matrix.python-version }}
           poetry-version: ${{ env.POETRY_VERSION }}
           working-directory: ${{ inputs.working-directory }}
-          cache-key: infinity-emb-test-${{ matrix.coverage_tests }}
+          cache-key: ${{ inputs.working-directory }}-test-${{ matrix.coverage_tests }}
 
-      - name: Install dependencies
+      - name: Install dependencies from local
+        # only if source is local
         shell: bash
-        run: poetry install --extras all --with test
+        run: poetry install ${{ inputs.extra_poetry }}
 
       - name: Run Pytest Coverage
+        if: ${{ inputs.working-directory == 'libs/infinity_emb' }}
         run: |
           poetry run coverage run -m --source ./infinity_emb pytest tests/${{ matrix.coverage_tests }} 
           poetry run coverage xml
+      
+      - name: Run Pytest Coverage w/o infinity
+        if: ${{ inputs.working-directory != 'libs/infinity_emb' }}
+        run: 
+          make coverage
 
       - name: Upload coverage Report to Codecov for python 3.11
         if: ${{ matrix.python-version == '3.11' && inputs.upload_coverage == true && matrix.os == 'ubuntu-latest'}}

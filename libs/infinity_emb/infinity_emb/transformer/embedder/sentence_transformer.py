@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023-now michaelfeil
+
 from __future__ import annotations
 
 import copy
@@ -80,6 +83,10 @@ class SentenceTransformerPatched(SentenceTransformer, BaseEmbedder):
         ]:
             logger.info("Switching to half() precision (cuda: fp16). ")
             self.half()
+        elif self.device.type == "cuda" and engine_args.dtype in [
+            Dtype.bfloat16,
+        ]:
+            fm.auto_model.to(torch.bfloat16)
 
         if engine_args.dtype in (Dtype.int8, Dtype.fp8):
             fm.auto_model = quant_interface(

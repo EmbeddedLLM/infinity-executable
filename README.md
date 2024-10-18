@@ -18,30 +18,40 @@
 [![ci][ci-shield]][ci-url]
 [![Downloads][pepa-shield]][pepa-url]
 [![DOI](https://zenodo.org/badge/703686617.svg)](https://zenodo.org/doi/10.5281/zenodo.11406462)
+![Docker pulls](https://img.shields.io/docker/pulls/michaelf34/infinity)
 
 
-
-Infinity is a high-throughput, low-latency REST API for serving vector embeddings, supporting all sentence-transformer models and frameworks. Infinity is developed under [MIT License](https://github.com/michaelfeil/infinity/blob/main/LICENSE). Infinity powers inference behind [Gradient.ai](https://gradient.ai).
+ Infinity is a high-throughput, low-latency REST API for serving text-embeddings, reranking models and clip. Infinity is developed under [MIT License](https://github.com/michaelfeil/infinity/blob/main/LICENSE).
 
 ## Why Infinity
-* **Deploy any model from MTEB**: deploy any embedding model from [SentenceTransformers](https://github.com/UKPLab/sentence-transformers/)
-* **Fast inference backends**: The inference server is built on top of [torch](https://github.com/pytorch/pytorch), [optimum(onnx/tensorrt)](https://huggingface.co/docs/optimum/index) and [CTranslate2](https://github.com/OpenNMT/CTranslate2), using FlashAttention to get the most out of your **NVIDIA CUDA**, **AMD ROCM**, **CPU**, **AWS INF2** or **APPLE MPS** accelerator.
-* **Dynamic batching**: New embedding requests are queued while GPU is busy with the previous ones. New requests are squeezed intro your device as soon as ready. 
-* **Correct and tested implementation**: Unit and end-to-end tested. Embeddings via infinity are correctly embedded. Lets API users create embeddings till infinity and beyond.
-* **Easy to use**: The API is built on top of [FastAPI](https://fastapi.tiangolo.com/), [Swagger](https://swagger.io/) makes it fully documented. API are aligned to [OpenAI's Embedding specs](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings). View the docs at [https://michaelfeil.eu/infinity](https://michaelfeil.eu/infinity) on how to get started.
+* **Deploy any model from HuggingFace**: deploy any embedding, reranking, clip and sentence-transformer model from [HuggingFace]( https://huggingface.co/models?other=text-embeddings-inference&sort=trending)
+* **Fast inference backends**: The inference server is built on top of [torch](https://github.com/pytorch/pytorch), [optimum (ONNX/TensorRT)](https://huggingface.co/docs/optimum/index) and [CTranslate2](https://github.com/OpenNMT/CTranslate2), using FlashAttention to get the most out of your **NVIDIA CUDA**, **AMD ROCM**, **CPU**, **AWS INF2** or **APPLE MPS** accelerator. Infinity uses dynamic batching and tokenization dedicated in worker threads.
+* **Multi-modal and multi-model**: Mix-and-match multiple models. Infinity orchestrates them.
+* **Tested implementation**: Unit and end-to-end tested. Embeddings via infinity are correctly embedded. Lets API users create embeddings till infinity and beyond.
+* **Easy to use**: Built on [FastAPI](https://fastapi.tiangolo.com/). Infinity CLI v2 allows launching of all arguments via Environment variable or argument. OpenAPI aligned to [OpenAI's API specs](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings). View the docs at [https:///michaelfeil.github.io/infinity](https:///michaelfeil.github.io/infinity) on how to get started.
 
-### Infinity demo
-In this demo [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2), deployed at batch-size=2. After initialization, from a second terminal 3 requests  (payload 1,1,and 5 sentences) are sent via cURL.
-![](docs/demo_v0_0_1.gif)
+<p align="center">
+  <a href="https://github.com/runpod-workers/worker-infinity-embedding"><img src="https://github.com/user-attachments/assets/24f1906d-31b8-4e16-a479-1382cbdea046" alt="Logo Runpod" width="50"/></a>
+  <a href="https://www.truefoundry.com/cognita"><img src="https://github.com/user-attachments/assets/1b515b0f-2332-4b12-be82-933056bddee4" alt="Logo TrueFoundry" width="50"/></a>
+  <a href="https://vast.ai/article/serving-infinity"><img src="https://github.com/user-attachments/assets/8286d620-f403-48f5-bd7f-f471b228ae7b" alt="Logo Vast" width="46"/></a>
+  <a href="https://www.dataguard.de"><img src="https://github.com/user-attachments/assets/3fde1ac6-c299-455d-9fc2-ba4012799f9c" alt="Logo DataGuard" width="50"/></a>
+  <a href="https://community.sap.com/t5/artificial-intelligence-and-machine-learning-blogs/bring-open-source-llms-into-sap-ai-core/ba-p/13655167"><img src="https://github.com/user-attachments/assets/743e932b-ed5b-4a71-84cb-f28235707a84" alt="Logo SAP" width="47"/></a>
+  <a href="https://x.com/StuartReid1929/status/1763434100382163333"><img src="https://github.com/user-attachments/assets/477a4c54-1113-434b-83bc-1985f10981d3" alt="Logo Nosible" width="44"/></a>
+  <a href="https://github.com/freshworksinc/freddy-infinity"><img src="https://github.com/user-attachments/assets/a68da78b-d958-464e-aaf6-f39132be68a0" alt="Logo FreshWorks" width="50"/></a>
+  <a href="https://github.com/dstackai/dstack/tree/master/examples/deployment/infinity"><img src="https://github.com/user-attachments/assets/9cde2d6b-dc16-4f0a-81ba-535a84321467" alt="Logo Dstack" width="50"/></a>
+</p> 
 
 ### Latest News 🔥
-- [2024/06] clip model inference
-- [2024/06] `classify` endpoint, `API_KEY`, launch all arguments from env variables
-- [2024/05] launch multiple models using the `v2` cli
+
+- [2024/07] Inference deployment example via [Modal](./infra/modal/README.md) and a [free GPU deployment](https://infinity.modal.michaelfeil.eu/)
+- [2024/06] Support for multi-modal: clip, text-classification & launch all arguments from env variables
+- [2024/05] launch multiple models using the `v2` cli, including `--api-key`
 - [2024/03] infinity supports experimental int8 (cpu/cuda) and fp8 (H100/MI300) support
-- [2024/03] Docs are online: https://michaelfeil.eu/infinity/latest/
+- [2024/03] Docs are online: https://michaelfeil.github.io/infinity/latest/
 - [2024/02] Community meetup at the [Run:AI Infra Club](https://discord.gg/7D4fbEgWjv)
 - [2024/01] TensorRT / ONNX inference
+- [2023/10] First release
+
 
 ## Getting started
 
@@ -80,6 +90,10 @@ docker run -it --gpus all \
 ```
 The cache path at inside the docker container is set by the environment variable `HF_HOME`.
 
+### CLI demo
+In this demo [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2), deployed at batch-size=2. After initialization, from a second terminal 3 requests  (payload 1,1,and 5 sentences) are sent via cURL.
+![](docs/demo_v0_0_1.gif)
+
 ### Launch it via the Python API
 
 Instead of the cli & RestAPI use infinity's interface via the Python API. 
@@ -105,36 +119,13 @@ asyncio.run(embed_text(array[0]))
 ```
 
 Example embedding models:
+- Any trending embedding / reranking model is likely supported: https://huggingface.co/models?other=text-embeddings-inference&sort=trending
 - [mixedbread-ai/mxbai-embed-large-v1](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1)
 - [WhereIsAI/UAE-Large-V1](https://huggingface.co/WhereIsAI/UAE-Large-V1)
 - [BAAI/bge-base-en-v1.5](https://huggingface.co/BAAI/bge-base-en-v1.5)
 - [Alibaba-NLP/gte-large-en-v1.5](https://huggingface.co/Alibaba-NLP/gte-large-en-v1.5)
 - [jinaai/jina-embeddings-v2-base-code](https://huggingface.co/jinaai/jina-embeddings-v2-base-code)
-- intfloat/multilingual-e5-large-instruct
-
-### Launch on the cloud via dstack
-
-dstack allows you to provision a VM instance on the cloud of your choice. Write a service configuration file as below for the deployment of `BAAI/bge-small-en-v1.5` model wrapped in Infinity.
-
-```yaml
-type: service
-
-image: michaelf34/infinity:latest
-env:
-  - INFINITY_MODEL_ID=BAAI/bge-small-en-v1.5;BAAI/bge-reranker-base;
-  - INFINITY_PORT=80
-commands:
-  - infinity_emb v2
-port: 80
-```
-
-Then, simply run the following dstack command. After this, a prompt will appear to let you choose which VM instance to deploy the Infinity.
-
-```shell
-dstack run . -f infinity/serve.dstack.yml --gpu 16GB
-```
-
-For more detailed tutorial and general information about dstack, visit the [official doc](https://dstack.ai/examples/infinity/#run-the-configuration).
+- [intfloat/multilingual-e5-large-instruct](https://huggingface.co/intfloat/multilingual-e5-large-instruct)
 
 
 ### Reranking
@@ -207,6 +198,47 @@ Example models:
 - Currently no support for pure vision models: nomic-ai/nomic-embed-vision-v1.5, ..
 
 
+### CLAP models
+
+CLAP models are able to encode audio and text at the same time. 
+
+```python
+import asyncio
+from infinity_emb import AsyncEngineArray, EngineArgs, AsyncEmbeddingEngine
+import requests
+import soundfile as sf
+import io
+
+sentences = ["This is awesome.", "I am bored."]
+
+url = "https://bigsoundbank.com/UPLOAD/wav/2380.wav"
+raw_bytes = requests.get(url, stream=True).content
+
+audios = [raw_bytes]
+engine_args = EngineArgs(
+    model_name_or_path = "laion/clap-htsat-unfused",
+    dtype="float32", 
+    engine="torch"
+
+)
+array = AsyncEngineArray.from_args([engine_args])
+
+async def embed(engine: AsyncEmbeddingEngine): 
+    await engine.astart()
+    embeddings, usage = await engine.embed(sentences=sentences)
+    embedding_audios = await engine.audio_embed(audios=audios)
+    await engine.astop()
+
+asyncio.run(embed(array["laion/clap-htsat-unfused"]))
+```
+
+* Note: The sampling rate of the audio data needs to match the model *
+
+Example models:
+- [Clap Models from LAION](https://huggingface.co/collections/laion/clap-contrastive-language-audio-pretraining-65415c0b18373b607262a490)
+
+
+
 ### Text Classification 
 
 Use text classification with Infinity's `classify` feature, which allows for sentiment analysis, emotion detection, and more classification tasks.
@@ -233,14 +265,17 @@ asyncio.run(classifier(array["SamLowe/roberta-base-go_emotions"]))
 
 Example models:
 - [ProsusAI/finbert](https://huggingface.co/ProsusAI/finbert)
-- [SamLowe/roberta-base-go_emotions](SamLowe/roberta-base-go_emotions)
+- [SamLowe/roberta-base-go_emotions](https://huggingface.co/SamLowe/roberta-base-go_emotions)
 
 ## Integrations:
-- https://github.com/infiniflow/ragflow
-- https://github.com/truefoundry/cognita
-- https://github.com/runpod-workers/worker-infinity-embedding
-- https://github.com/langchain-ai/langchain
-- ...
+- [Serverless deployments at Runpod](https://github.com/runpod-workers/worker-infinity-embedding)
+- [Truefoundry Cognita](https://github.com/truefoundry/cognita)
+- [Langchain example](https://github.com/langchain-ai/langchain)
+- [imitater - A unified language model server built upon vllm and infinity.](https://github.com/the-seeds/imitater)
+- [Dwarves Foundation: Deployment examples using Modal.com](https://github.com/dwarvesf/llm-hosting)
+- [infiniflow/Ragflow](https://github.com/infiniflow/ragflow)
+- [SAP Core AI](https://github.com/SAP-samples/btp-generative-ai-hub-use-cases/tree/main/10-byom-oss-llm-ai-core)
+- [gpt_server - gpt_server is an open-source framework designed for production-level deployment of LLMs (Large Language Models) or Embeddings.](https://github.com/shell-nlp/gpt_server)
 
 ## Launch FAQ:
 <details>
@@ -257,12 +292,12 @@ Example models:
   All models of the sentence transformers org are supported https://huggingface.co/sentence-transformers / sbert.net. 
   LLM's like LLAMA2-7B are not intended for deployment.
 
-  With the command `--engine torch` the model must be compatible with https://github.com/UKPLab/sentence-transformers/.
-    - only models from Huggingface are supported.
+  With the command `--engine torch` the model must be compatible with https://github.com/UKPLab/sentence-transformers/ and AutoModel
+
+  With the command `--engine optimum`, there must be an onnx file. Models from https://huggingface.co/Xenova are recommended.
   
   With the command `--engine ctranslate2`
     - only `BERT` models are supported.
-    - only models from Huggingface are supported.
   
   For the latest trends, you might want to check out one of the following models.
     https://huggingface.co/spaces/mteb/leaderboard
@@ -296,8 +331,8 @@ Example models:
 </details>
 
 ## Documentation
-View the docs at [https://michaelfeil.eu/infinity](https://michaelfeil.eu/infinity) on how to get started.
-After startup, the Swagger Ui will be available under `{url}:{port}/docs`, in this case `http://localhost:7997/docs`. You can also find a interactive preview here: https://michaelfeil-infinity.hf.space/docs
+View the docs at [https:///michaelfeil.github.io/infinity](https://michaelfeil.github.io/infinity) on how to get started.
+After startup, the Swagger Ui will be available under `{url}:{port}/docs`, in this case `http://localhost:7997/docs`. You can also find a interactive preview here: https://infinity.modal.michaelfeil.eu/docs (and https://michaelfeil-infinity.hf.space/docs)
 
 ## Contribute and Develop
 
@@ -318,7 +353,7 @@ poetry run pytest ./tests
 All contributions must be made in a way to be compatible with the MIT License of this repo. 
 
 ### Citation
-```json
+```
 @software{feil_2023_11630143,
   author       = {Feil, Michael},
   title        = {Infinity - To Embeddings and Beyond},

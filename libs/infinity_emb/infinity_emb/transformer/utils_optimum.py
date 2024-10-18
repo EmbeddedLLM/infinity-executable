@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023-now michaelfeil
+
 from pathlib import Path
 from typing import Optional, Union
 
@@ -11,12 +14,14 @@ from infinity_emb.primitives import Device
 
 if CHECK_ONNXRUNTIME.is_available:
     try:
-        from optimum.onnxruntime import ORTOptimizer  # type: ignore
+        from optimum.modeling_base import OptimizedModel  # type: ignore
+        from optimum.onnxruntime import (  # type: ignore
+            ORTModel,
+            ORTOptimizer,
+        )
         from optimum.onnxruntime.configuration import OptimizationConfig  # type: ignore
-    except ImportError:
-        pass
-    except RuntimeError:
-        pass
+    except (ImportError, RuntimeError, Exception) as ex:
+        CHECK_ONNXRUNTIME.mark_dirty(ex)
 
 if CHECK_TORCH.is_available:
     import torch
@@ -64,21 +69,35 @@ def device_to_onnx(device: Device) -> str:
 
 
 def optimize_model(
-    model_name_or_path,
-    model_class,
+    model_name_or_path: Union[str, Path],
+    model_class: "ORTModel",
     execution_provider: str,
     file_name: str,
     optimize_model=False,
     revision: Optional[str] = None,
     trust_remote_code: bool = True,
-):
+) -> "OptimizedModel":
+    """
+    Optimizes, and then loads the model to work best with the execution provider.
+
+    Args:
+        model_name_or_path (Union[str, Path]): The model name or path
+        model_class (ORTModel): The model class to use, e.g. ORTModelForSequenceClassification
+        execution_provider (str): The execution provider to use, e.g. "CUDAExecutionProvider"
+        file_name (str): The onnx file name to use, e.g. "model.onnx"
+        optimize_model (bool, optional): Whether to optimize the model. Defaults to False.
+        revision (Optional[str], optional): The revision to use. Defaults to None.
+        trust_remote_code (bool, optional): Whether to trust the remote code. Defaults to True.
+    """
     CHECK_ONNXRUNTIME.mark_required()
     path_folder = (
-        Path(model_name_or_path)
-        if Path(model_name_or_path).exists()
-        else Path(HUGGINGFACE_HUB_CACHE) / "infinity_onnx" / model_name_or_path
+        Path(HUGGINGFACE_HUB_CACHE)
+        / "infinity_onnx"
+        / execution_provider
+        / model_name_or_path
     )
-    files_optimized = list(path_folder.glob("**/*optimized.onnx"))
+    OPTIMIZED_SUFFIX = "_optimized.onnx"
+    files_optimized = list(path_folder.glob(f"**/*{OPTIMIZED_SUFFIX}"))
     if execution_provider == "TensorrtExecutionProvider":
         return model_class.from_pretrained(
             model_name_or_path,
@@ -107,7 +126,7 @@ def optimize_model(
             file_name=file_optimized.name,
         )
 
-    unoptimized_model_path = model_class.from_pretrained(
+    unoptimized_model = model_class.from_pretrained(
         model_name_or_path,
         revision=revision,
         trust_remote_code=trust_remote_code,
@@ -115,12 +134,11 @@ def optimize_model(
         file_name=file_name,
     )
     if not optimize_model or execution_provider == "TensorrtExecutionProvider":
-        return unoptimized_model_path
-
+        return unoptimized_model
     try:
         logger.info("Optimizing model")
 
-        optimizer = ORTOptimizer.from_pretrained(unoptimized_model_path)
+        optimizer = ORTOptimizer.from_pretrained(unoptimized_model)
 
         is_gpu = "cpu" not in execution_provider.lower()
         optimization_config = OptimizationConfig(
@@ -144,18 +162,18 @@ def optimize_model(
             revision=revision,
             trust_remote_code=trust_remote_code,
             provider=execution_provider,
-            file_name=Path(file_name).name.replace(".onnx", "_optimized.onnx"),
+            file_name=Path(file_name).name.replace(".onnx", OPTIMIZED_SUFFIX),
         )
     except Exception as e:
         logger.warning(
             f"Optimization failed with {e}. Going to use the unoptimized model."
         )
-        model = unoptimized_model_path
+        model = unoptimized_model
 
     return model
 
 
-def list_all_repo_files(
+def _list_all_repo_files(
     model_name_or_path: str,
     revision: Union[str, None] = None,
     use_auth_token: Union[bool, str] = True,
@@ -185,7 +203,7 @@ def get_onnx_files(
     prefer_quantized=False,
 ) -> Path:
     """gets the onnx files from the repo"""
-    repo_files = list_all_repo_files(
+    repo_files = _list_all_repo_files(
         model_name_or_path=model_name_or_path,
         revision=revision,
         use_auth_token=use_auth_token,

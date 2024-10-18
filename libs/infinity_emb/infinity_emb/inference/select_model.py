@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023-now michaelfeil
+
 import json
 from pathlib import Path
 from typing import Union
@@ -8,8 +11,9 @@ from infinity_emb.args import (
 from infinity_emb.log_handler import logger
 from infinity_emb.transformer.abstract import BaseCrossEncoder, BaseEmbedder
 from infinity_emb.transformer.utils import (
-    ClipLikeEngine,
+    AudioEmbedEngine,
     EmbedderEngine,
+    ImageEmbedEngine,
     InferenceEngine,
     PredictEngine,
     RerankEngine,
@@ -18,7 +22,10 @@ from infinity_emb.transformer.utils import (
 
 def get_engine_type_from_config(
     engine_args: EngineArgs,
-) -> Union[EmbedderEngine, RerankEngine]:
+) -> Union[
+    EmbedderEngine, RerankEngine, PredictEngine, ImageEmbedEngine, AudioEmbedEngine
+]:
+    """resolved the class of inference engine path from config.json of the repo."""
     if engine_args.engine in [InferenceEngine.debugengine]:
         return EmbedderEngine.from_inference_engine(engine_args.engine)
 
@@ -45,8 +52,11 @@ def get_engine_type_from_config(
             return RerankEngine.from_inference_engine(engine_args.engine)
         else:
             return PredictEngine.from_inference_engine(engine_args.engine)
-    if config.get("vision_config") and "clip" in config.get("model_type", "").lower():
-        return ClipLikeEngine.from_inference_engine(engine_args.engine)
+    if config.get("vision_config"):
+        return ImageEmbedEngine.from_inference_engine(engine_args.engine)
+    if config.get("audio_config") and "clap" in config.get("model_type", "").lower():
+        return AudioEmbedEngine.from_inference_engine(engine_args.engine)
+
     else:
         return EmbedderEngine.from_inference_engine(engine_args.engine)
 
@@ -54,6 +64,7 @@ def get_engine_type_from_config(
 def select_model(
     engine_args: EngineArgs,
 ) -> tuple[Union[BaseCrossEncoder, BaseEmbedder], float, float]:
+    """based on engine args, fully instantiates the Engine."""
     logger.info(
         f"model=`{engine_args.model_name_or_path}` selected, "
         f"using engine=`{engine_args.engine.value}`"

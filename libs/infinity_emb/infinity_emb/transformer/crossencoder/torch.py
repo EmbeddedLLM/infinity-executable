@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023-now michaelfeil
+
 from __future__ import annotations
 
 import copy
@@ -65,10 +68,7 @@ class CrossEncoderPatched(CrossEncoder, BaseCrossEncoder):
             Dtype.auto,
             Dtype.float16,
         ]:
-            logger.info(
-                "Switching to half() precision (cuda: fp16). "
-                "Disable by the setting the env var `INFINITY_DISABLE_HALF`"
-            )
+            logger.info("Switching to half() precision (cuda: fp16). ")
             self.model.to(dtype=torch.float16)
 
     def encode_pre(self, input_tuples: list[tuple[str, str]]):

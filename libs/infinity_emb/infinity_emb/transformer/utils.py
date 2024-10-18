@@ -1,7 +1,11 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023-now michaelfeil
+
 from enum import Enum
 from typing import Callable
 
 from infinity_emb.primitives import InferenceEngine
+from infinity_emb.transformer.audio.torch import TorchAudioModel
 from infinity_emb.transformer.classifier.torch import SentenceClassifier
 from infinity_emb.transformer.crossencoder.optimum import OptimumCrossEncoder
 from infinity_emb.transformer.crossencoder.torch import (
@@ -14,7 +18,7 @@ from infinity_emb.transformer.embedder.optimum import OptimumEmbedder
 from infinity_emb.transformer.embedder.sentence_transformer import (
     SentenceTransformerPatched,
 )
-from infinity_emb.transformer.vision.torch_vision import ClipLikeModel
+from infinity_emb.transformer.vision.torch_vision import TIMM
 
 __all__ = [
     "length_tokenizer",
@@ -59,15 +63,26 @@ class RerankEngine(Enum):
             raise NotImplementedError(f"RerankEngine for {engine} not implemented")
 
 
-class ClipLikeEngine(Enum):
-    torch = ClipLikeModel
+class ImageEmbedEngine(Enum):
+    torch = TIMM
 
     @staticmethod
     def from_inference_engine(engine: InferenceEngine):
         if engine == InferenceEngine.torch:
-            return ClipLikeEngine.torch
+            return ImageEmbedEngine.torch
         else:
-            raise NotImplementedError(f"ClipLikeEngine for {engine} not implemented")
+            raise NotImplementedError(f"ImageEmbedEngine for {engine} not implemented")
+
+
+class AudioEmbedEngine(Enum):
+    torch = TorchAudioModel
+
+    @staticmethod
+    def from_inference_engine(engine: InferenceEngine):
+        if engine == InferenceEngine.torch:
+            return AudioEmbedEngine.torch
+        else:
+            raise NotImplementedError(f"AudioEmbedEngine for {engine} not implemented")
 
 
 class PredictEngine(Enum):

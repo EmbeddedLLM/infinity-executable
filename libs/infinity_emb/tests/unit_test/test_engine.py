@@ -1,12 +1,14 @@
 import asyncio
+import inspect
 import sys
 
 import numpy as np
 import pytest
 import torch
+from PIL import Image
 from sentence_transformers import CrossEncoder  # type: ignore[import-untyped]
 
-from infinity_emb import AsyncEmbeddingEngine, EngineArgs
+from infinity_emb import AsyncEmbeddingEngine, AsyncEngineArray, EngineArgs
 from infinity_emb.primitives import (
     Device,
     EmbeddingDtype,
@@ -47,7 +49,7 @@ async def test_async_api_torch():
     )
     assert engine.capabilities == {"embed"}
     async with engine:
-        embeddings, usage = await engine.embed(sentences)
+        embeddings, usage = await engine.embed(sentences=sentences)
         assert isinstance(embeddings, list)
         assert isinstance(embeddings[0], np.ndarray)
         embeddings = np.array(embeddings)
@@ -63,8 +65,8 @@ async def test_async_api_torch():
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("engine", [InferenceEngine.torch, InferenceEngine.optimum])
-async def test_engine_reranker_torch_opt(engine):
+@pytest.mark.parametrize("engine_name", [InferenceEngine.torch])
+async def test_engine_reranker_torch_opt(engine_name: InferenceEngine):
     model_unpatched = CrossEncoder(
         "mixedbread-ai/mxbai-rerank-xsmall-v1",
     )
@@ -85,14 +87,44 @@ async def test_engine_reranker_torch_opt(engine):
     query_docs = [(query, doc) for doc in documents]
 
     async with engine:
-        rankings, usage = await engine.rerank(query=query, docs=documents)
-
+        rankings_objects, usage = await engine.rerank(query=query, docs=documents)
+    rankings = [
+        x.relevance_score
+        for x in sorted(rankings_objects, key=lambda x: x.index, reverse=False)
+    ]
     rankings_unpatched = model_unpatched.predict(query_docs)
 
     np.testing.assert_allclose(rankings, rankings_unpatched, rtol=1e-1, atol=1e-1)
     assert usage == sum([len(query) + len(d) for d in documents])
     assert len(rankings) == len(documents)
     np.testing.assert_almost_equal(rankings[:3], [0.83, 0.085, 0.028], decimal=2)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("engine_name", [InferenceEngine.torch])
+async def test_engine_reranker_top_n(engine_name):
+    query = "Where is Paris?"
+    documents = [
+        "Paris is the capital of France.",
+        "Berlin is the capital of Germany.",
+        "You can now purchase my favorite dish",
+    ]
+    engine = AsyncEmbeddingEngine.from_args(
+        EngineArgs(
+            model_name_or_path="mixedbread-ai/mxbai-rerank-xsmall-v1",
+            engine=engine_name,
+            model_warmup=False,
+            bettertransformer=False,
+        )
+    )
+
+    async with engine:
+        for top_k in [None, 1, 2, 3, len(documents) + 999999]:
+            rankings, _ = await engine.rerank(query=query, docs=documents, top_n=top_k)
+            if top_k is None:
+                assert len(rankings) == len(documents)
+            else:
+                assert len(rankings) == min(top_k, len(documents))
 
 
 @pytest.mark.anyio
@@ -134,7 +166,7 @@ async def test_async_api_torch_lengths_via_tokenize_usage():
         )
     )
     async with engine:
-        embeddings, usage = await engine.embed(sentences)
+        embeddings, usage = await engine.embed(sentences=sentences)
         embeddings = np.array(embeddings)
         # usage should be similar to
         assert usage == 5
@@ -161,9 +193,9 @@ async def test_torch_clip_embed():
         )
     )
     async with engine:
-        t1, t2 = asyncio.create_task(engine.embed(sentences)), asyncio.create_task(
-            engine.image_embed(images=image_urls)
-        )
+        t1, t2 = asyncio.create_task(
+            engine.embed(sentences=sentences)
+        ), asyncio.create_task(engine.image_embed(images=image_urls))
         emb_text, usage_text = await t1
         emb_image, usage_image = await t2
         emb_text_np = np.array(emb_text)  # type: ignore
@@ -173,6 +205,70 @@ async def test_torch_clip_embed():
     assert emb_image_np.shape[0] == len(image_urls)
     assert emb_text_np.shape[1] >= 10
     assert emb_image_np.shape == emb_image_np[: len(image_urls)].shape
+
+    assert usage_text == sum([len(s) for s in sentences])
+
+    # check if cat image and two cats are most similar
+    for i in range(1, len(sentences)):
+        assert np.dot(emb_text_np[0], emb_image_np[0]) > np.dot(
+            emb_text_np[i], emb_image_np[0]
+        )
+
+
+@pytest.mark.anyio
+async def test_clap_like_model(audio_sample):
+    model_name = pytest.DEFAULT_AUDIO_MODEL
+    engine = AsyncEmbeddingEngine.from_args(
+        EngineArgs(model_name_or_path=model_name, dtype="float32")
+    )
+    url = audio_sample[1]
+    bytes_url = audio_sample[0].content
+
+    inputs = ["a sound of a cat", "a sound of a cat"]
+    audios = [url, bytes_url]
+    async with engine:
+        embeddings_text, usage_1 = await engine.embed(sentences=inputs)
+        embeddings_audio, usage_2 = await engine.audio_embed(audios=audios)
+
+    assert usage_1 == sum([len(s) for s in inputs])
+    assert len(embeddings_text) == len(inputs)
+    assert len(embeddings_audio) == len(audios)
+    assert embeddings_text[0].shape[0] == embeddings_audio[0].shape[0]
+    assert all([e.shape[0] >= 10 for e in embeddings_text])
+    assert usage_2 > 0
+
+
+@pytest.mark.anyio
+async def test_clip_embed_pil_image_input(image_sample):
+    img_data = image_sample[0].raw
+    img_obj = Image.open(img_data)
+    images = [img_obj]  # a photo of two cats
+    sentences = [
+        "a photo of two cats",
+        "a photo of a cat",
+        "a photo of a dog",
+        "a photo of a car",
+    ]
+    engine = AsyncEmbeddingEngine.from_args(
+        EngineArgs(
+            model_name_or_path=pytest.DEFAULT_IMAGE_MODEL,
+            engine=InferenceEngine.torch,
+            model_warmup=True,
+        )
+    )
+    async with engine:
+        t1, t2 = asyncio.create_task(
+            engine.embed(sentences=sentences)
+        ), asyncio.create_task(engine.image_embed(images=images))
+        emb_text, usage_text = await t1
+        emb_image, usage_image = await t2
+        emb_text_np = np.array(emb_text)  # type: ignore
+        emb_image_np = np.array(emb_image)  # type: ignore
+
+    assert emb_text_np.shape[0] == len(sentences)
+    assert emb_image_np.shape[0] == len(images)
+    assert emb_text_np.shape[1] >= 10
+    assert emb_image_np.shape == emb_image_np[: len(images)].shape
 
     assert usage_text == sum([len(s) for s in sentences])
 
@@ -201,7 +297,7 @@ async def test_async_api_torch_embedding_quant(embedding_dtype: EmbeddingDtype):
         device = "cpu"
     engine = AsyncEmbeddingEngine.from_args(
         EngineArgs(
-            model_name_or_path="michaelfeil/bge-small-en-v1.5",
+            model_name_or_path=pytest.DEFAULT_BERT_MODEL,  # type: ignore
             engine=InferenceEngine.torch,
             device=Device[device],
             lengths_via_tokenize=True,
@@ -211,7 +307,7 @@ async def test_async_api_torch_embedding_quant(embedding_dtype: EmbeddingDtype):
         )
     )
     async with engine:
-        emb, usage = await engine.embed(sentences)
+        emb, usage = await engine.embed(sentences=sentences)
         embeddings = np.array(emb)  # type: ignore
 
     if embedding_dtype == EmbeddingDtype.int8:
@@ -233,7 +329,7 @@ async def test_async_api_failing():
     sentences = ["Hi", "how"]
     engine = AsyncEmbeddingEngine.from_args(EngineArgs())
     with pytest.raises(ValueError):
-        await engine.embed(sentences)
+        await engine.embed(sentences=sentences)
 
     await engine.astart()
     assert not engine.is_overloaded()
@@ -251,3 +347,14 @@ async def test_async_api_failing_revision():
                 revision="a32952c6d05d45f64f9f709a092c00839bcfe70a",
             )
         )
+
+
+@pytest.mark.parametrize("method_name", list(pytest.ENGINE_METHODS))  # type: ignore
+def test_args_between_array_and_engine_same(method_name: str):
+    array_method = inspect.getfullargspec(getattr(AsyncEngineArray, method_name))
+    engine_method = inspect.getfullargspec(getattr(AsyncEmbeddingEngine, method_name))
+
+    assert "model" in array_method.kwonlyargs
+    assert sorted(array_method.args + array_method.kwonlyargs) == sorted(
+        engine_method.args + engine_method.kwonlyargs + ["model"]
+    )
