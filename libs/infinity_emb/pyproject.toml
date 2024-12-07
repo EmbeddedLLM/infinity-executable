@@ -106,7 +106,7 @@ einops=["einops"]
 logging=["rich"]
 cache=["diskcache"]
 vision=["colpali-engine","pillow","timm","torchvision"]
-# openvino=["onnxruntime-openvino","openvino","openvino-tokenizers"]
+openvino=["onnxruntime-openvino","openvino","openvino-tokenizers"]
 audio=["soundfile"]
 server=[
     "fastapi",
