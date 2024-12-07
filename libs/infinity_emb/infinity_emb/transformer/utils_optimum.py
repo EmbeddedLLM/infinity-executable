@@ -152,7 +152,7 @@ def optimize_model(
             file_name=file_name,
         )
 
-    file_optimized: Path | str = ""
+    file_optimized: Union[Path, str] = ""
 
     extra_args = {}
 
