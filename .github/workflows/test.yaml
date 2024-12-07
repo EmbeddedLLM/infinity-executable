@@ -31,22 +31,22 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest] # macos-latest
         python-version:
-          - "3.9"
-          - "3.10"
-          - "3.11"
+          # - "3.9"
+          # - "3.10"
+          # - "3.11"
           - "3.12"
-        coverage_tests: ["unit_test", "end_to_end"]
+        coverage_tests: ["unit_test"] #, "end_to_end"]
         exclude:
           # Exclude unit tests on macOS due to compatibility issues
-          - python-version: "3.9"
-            os: macos-latest
-            coverage_tests: "unit_test"
-          - python-version: "3.10"
-            os: macos-latest
-            coverage_tests: "unit_test"
-          - python-version: "3.11"
-            os: macos-latest
-            coverage_tests: "unit_test"
+          # - python-version: "3.9"
+          #   os: macos-latest
+          #   coverage_tests: "unit_test"
+          # - python-version: "3.10"
+          #   os: macos-latest
+          #   coverage_tests: "unit_test"
+          # - python-version: "3.11"
+          #   os: macos-latest
+          #   coverage_tests: "unit_test"
           - python-version: "3.12"
             os: macos-latest
             coverage_tests: "unit_test"

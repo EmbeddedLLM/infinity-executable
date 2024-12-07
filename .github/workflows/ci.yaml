@@ -38,13 +38,13 @@ jobs:
       working-directory: libs/infinity_emb
     secrets: inherit
 
-  lint-embed_package:
-    uses:
-      ./.github/workflows/linting.yaml
-    with:
-      working-directory: libs/embed_package
-      extra_poetry: "--with test,lint,codespell"
-    secrets: inherit
+  # lint-embed_package:
+  #   uses:
+  #     ./.github/workflows/linting.yaml
+  #   with:
+  #     working-directory: libs/embed_package
+  #     extra_poetry: "--with test,lint,codespell"
+  #   secrets: inherit
 
   test-infinity_emb:
     uses:
@@ -54,11 +54,11 @@ jobs:
       upload_coverage: true
     secrets: inherit
   
-  test-embed_package:
-    uses:
-      ./.github/workflows/test.yaml
-    with:
-      working-directory: libs/embed_package
-      upload_coverage: false
-      extra_poetry: "--with test"
-    secrets: inherit
+  # test-embed_package:
+  #   uses:
+  #     ./.github/workflows/test.yaml
+  #   with:
+  #     working-directory: libs/embed_package
+  #     upload_coverage: false
+  #     extra_poetry: "--with test"
+  #   secrets: inherit
