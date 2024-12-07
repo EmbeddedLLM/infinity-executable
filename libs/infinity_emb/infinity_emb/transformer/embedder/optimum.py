@@ -53,7 +53,7 @@ class OptimumEmbedder(BaseEmbedder):
         provider = device_to_onnx(engine_args.device)
         self.provider = provider
 
-        if provider == "OpenVINOExecutionProvider":
+        if "openvino" in provider.lower():  # OpenVINO Executor
             CHECK_OPTIMUM_INTEL.mark_required()
             filename = ""
             try:

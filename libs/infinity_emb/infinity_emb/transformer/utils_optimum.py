@@ -65,13 +65,13 @@ def normalize(input_array, p=2, dim=1, eps=1e-12):
 def device_to_onnx(device: Device) -> str:
     CHECK_ONNXRUNTIME.mark_required()
     available = ort.get_available_providers()
+    if CHECK_OPTIMUM_INTEL.is_available:
+        available.append(["OpenVINOExecutionProvider"])
 
     if device == Device.cpu:
         if "OpenVINOExecutionProvider" in available:
             return "OpenVINOExecutionProvider"
         return "CPUExecutionProvider"
-    elif device == Device.openvino:
-        return "OpenVINOExecutionProvider"
     elif device == Device.cuda:
         if "ROCMExecutionProvider" in available:
             return "ROCMExecutionProvider"

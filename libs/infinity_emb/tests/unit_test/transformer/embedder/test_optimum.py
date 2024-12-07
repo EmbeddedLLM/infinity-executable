@@ -29,7 +29,7 @@ def test_embedder_optimum(size="large"):
 
 def test_embedder_optimum_openvino_cpu(size="large"):
     model = OptimumEmbedder(
-        engine_args=EngineArgs(model_name_or_path=f"BAAI/bge-{size}-en-v1.5", device="openvino")
+        engine_args=EngineArgs(model_name_or_path=f"BAAI/bge-{size}-en-v1.5", device="cpu")
     )
     st_model = SentenceTransformer(model_name_or_path=f"BAAI/bge-{size}-en-v1.5", device="cpu")
 
