@@ -9,10 +9,9 @@ from huggingface_hub import HfApi, HfFolder  # type: ignore
 from huggingface_hub.constants import HUGGINGFACE_HUB_CACHE  # type: ignore
 
 from infinity_emb._optional_imports import (
-    CHECK_ONNXRUNTIME, 
-    CHECK_OPTIMUM_AMD, 
-    CHECK_TORCH, 
-    CHECK_OPTIMUM_INTEL
+    CHECK_ONNXRUNTIME,
+    CHECK_OPTIMUM_AMD,
+    CHECK_OPTIMUM_INTEL,
 )
 from infinity_emb.log_handler import logger
 from infinity_emb.primitives import Device
@@ -31,26 +30,15 @@ if CHECK_ONNXRUNTIME.is_available:
         CHECK_ONNXRUNTIME.mark_dirty(ex)
 
 if CHECK_OPTIMUM_INTEL.is_available:
-    from optimum.intel import (
-        OVModelForFeatureExtraction,  # type: ignore[import-untyped]
-        OVWeightQuantizationConfig, 
-        OVConfig,
-        OVQuantizer,
-    )
-    # try:
-    #     from optimum.intel import (
-    #         OVModelForFeatureExtraction,  # type: ignore[import-untyped]
-    #         OVWeightQuantizationConfig, 
-    #         OVConfig,
-    #         OVQuantizer,
-    #     )
-
-    # except (ImportError, RuntimeError, Exception) as ex:
-    #     CHECK_OPTIMUM_INTEL.mark_dirty(ex)
-
-
-if CHECK_TORCH.is_available:
-    import torch
+    try:
+        from optimum.intel import (  # type: ignore
+            OVModelForFeatureExtraction,
+            OVWeightQuantizationConfig,
+            OVConfig,
+            OVQuantizer,
+        )
+    except (ImportError, RuntimeError, Exception) as ex:
+        CHECK_OPTIMUM_INTEL.mark_dirty(ex)
 
 
 def mean_pooling(last_hidden_states: np.ndarray, attention_mask: np.ndarray):
@@ -198,7 +186,6 @@ def optimize_model(
             file_optimized = files_optimized[0]
 
     if file_optimized:
-        
         logger.info(f"Optimized model found at {file_optimized}, skipping optimization")
         return model_class.from_pretrained(
             file_optimized.parent.as_posix()
@@ -235,10 +222,12 @@ def optimize_model(
                     "INFERENCE_PRECISION_HINT": "bf16"
                 },  # fp16 for now as it has better precision than bf16
             )
-            quantizer = OVQuantizer.from_pretrained(ov_model, task="feature-extraction", export=True)
+            quantizer = OVQuantizer.from_pretrained(
+                ov_model, task="feature-extraction", export=True
+            )
             ov_config = OVConfig(
                 quantization_config=OVWeightQuantizationConfig(
-                    bits=4, 
+                    bits=4,
                     sym=False,
                     ratio=1.0,
                     group_size=128,
@@ -247,12 +236,12 @@ def optimize_model(
             )
             quantizer.quantize(ov_config=ov_config, save_directory=path_folder.as_posix())
             model = OVModelForFeatureExtraction.from_pretrained(
-                path_folder.as_posix(), 
+                path_folder.as_posix(),
                 # ov_config={"INFERENCE_PRECISION_HINT": "fp32"} # fp16 for now as it has better precision than bf16
                 # ov_config={"INFERENCE_PRECISION_HINT": "fp16"} # fp16 for now as it has better precision than bf16
                 ov_config={
                     "INFERENCE_PRECISION_HINT": "bf16"
-                },  # fp16 for now as it has better precision than bf16, 
+                },  # fp16 for now as it has better precision than bf16,
                 export=False,
             )
             logger.info("Successfully load optimized model OpenVINOExecutionProvider")
@@ -285,12 +274,6 @@ def optimize_model(
                 trust_remote_code=trust_remote_code,
                 provider=execution_provider,
                 file_name=Path(file_name).name.replace(".onnx", OPTIMIZED_SUFFIX),
-            )
-        else:
-            raise ValueError(
-                f"Does not support {execution_provider}."
-                "Optimum engine only support `OpenVINOExecutionProvider` "
-                "and `CPUExecutionProvider`."
             )
 
     except Exception as e:

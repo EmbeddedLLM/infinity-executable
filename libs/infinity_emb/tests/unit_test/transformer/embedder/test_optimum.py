@@ -47,4 +47,3 @@ def test_embedder_optimum_openvino_cpu(size="large"):
         cosine_sim = np.dot(r, e) / (np.linalg.norm(e) * np.linalg.norm(r))
         assert cosine_sim > 0.94
     np.testing.assert_allclose(embeds, embeds_orig, atol=0.25)
-
